@@ -30,7 +30,9 @@ Objects comparator lets comparing :
  * two instances of scala cases classes or
  * two spark-scala dataframes
 
-It is possible to ignore some fields of the case objects or some columns of the dataframes
+It is possible to ignore some fields of the case objects or some columns of the dataframes.
+
+This could be used to compare dataframes before writing into a Cassandra table. Hence it reduces the tombstones.
 
 ### Examples
 
@@ -77,13 +79,6 @@ It is possible to ignore some fields of the case objects or some columns of the 
     (3, "Michael", "Marie", 12, "Johny", Seq("Elisabeth", "Paul", "Rachel")),
     (5, "Alice", "Doe", 12, "Rachel", Seq("Elisabeth", "Paul", "Edy"))).toDF("id", "firstName", "lastName", "age", "father", "teachers").as[Student]
 
-  import CompareIgnoringFields._
-  val differential = dfA.compareIgnoringFields(dfB)(Set("id"))(IgnoredFields('teachers), CompareIgnoringFields[Student])
-
-
-  differential[RowsWithSomeDifferencies].show(false)
-
-
   scala> dfA.show(false)
   +---+---------+--------+---+------+----------------------+
   |id |firstName|lastName|age|father|teachers              |
@@ -93,7 +88,6 @@ It is possible to ignore some fields of the case objects or some columns of the 
   |3  |Michael  |Marie   |12 |Johny |[Elisabeth, Paul]     |
   |4  |Alice    |Doe     |12 |Rachel|[Elisabeth, Paul, Edy]|
   +---+---------+--------+---+------+----------------------+
-
 
   scala> dfB.show(false)
   +---+---------+--------+---+------+-------------------------+
@@ -105,6 +99,9 @@ It is possible to ignore some fields of the case objects or some columns of the 
   |5  |Alice    |Doe     |12 |Rachel|[Elisabeth, Paul, Edy]   |
   +---+---------+--------+---+------+-------------------------+
 
+
+  import CompareIgnoringFields._
+  val differential = dfA.compareIgnoringFields(dfB)(Set("id"))(IgnoredFields('teachers), CompareIgnoringFields[Student])
 
   scala> differential("RowsWithSomeDifferencies").show(false)
   +---+---------+--------+---+------+-----------------+
