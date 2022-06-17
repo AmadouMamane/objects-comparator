@@ -1,0 +1,140 @@
+# Objects Comparator
+:page-layout: base
+:source-language: scala
+:icons: font
+:linkattrs:
+:sectanchors:
+:sectlink:
+:numbered:
+:doctype: book
+:toc: preamble
+:tip-caption: :bulb:
+:note-caption: :information_source:
+:important-caption: :heavy_exclamation_mark:
+:caution-caption: :fire:
+:warning-caption: :warning:
+
+ :revnumber: v1.1
+ :revdate: 15.03.2022
+ :revremark: initial release
+ :author: Amadou Mamane
+ :email: mamanesarki@yahoo.fr
+
+## Project documentation
+
+
+### Project description
+
+Objects comparator lets comparing :
+
+ * two instances of scala cases classes or
+ * two spark-scala dataframes
+
+It is possible to ignore some fields of the case objects or some columns of the dataframes
+
+### Examples
+
+#### Case objects comparison
+
+[subs="quotes"]
+----
+  case class Student(id: Int, firstName: String, lastName: String, age: Int, father: String, teachers: Seq[String])
+
+  val A = Student(1, "John", "Doe", 12, "Bob", Seq("Elisabeth", "Paul"))
+  val B = Student(1, "John", "Doe", 12, "Bob", Seq("Elisabeth", "Paul"))
+  val C = Student(1, "John", "Doe", 12, "Bob", Seq("Elisabeth", "Paul", "Robert"))
+
+  import CompareIgnoringFields._
+
+  scala> A.compareIgnoringFields(B)(IgnoredFields('teachers), CompareIgnoringFields[Student])
+  res29: Boolean = true
+
+
+  scala> A.compareIgnoringFields(C)(IgnoredFields('teachers), CompareIgnoringFields[Student])
+  res31: Boolean = true
+
+
+  scala> A.compareIgnoringFields(C)
+  res33: Boolean = false
+
+  scala> A.compareIgnoringFields(C)(IgnoredFields(), CompareIgnoringFields[Student])
+  res34: Boolean = false
+
+----
+
+
+#### Dataframes comparisons
+
+[subs="quotes"]
+----
+  val dfA = Seq((1, "John", "Doe", 12, "Bob", Seq("Elisabeth", "Paul")),
+    (2, "Claire", "Michel", 13, "Bill", Seq("Elisabeth", "Paul")),
+    (3, "Michael", "Marie", 12, "Johny", Seq("Elisabeth", "Paul")),
+    (4, "Alice", "Doe", 12, "Rachel", Seq("Elisabeth", "Paul", "Edy"))).toDF("id", "firstName", "lastName", "age", "father", "teachers").as[Student]
+
+  val dfB = Seq((1, "John", "Doe", 12, "Bob", Seq("Elisabeth", "Paul")),
+    (2, "Claire", "Michel", 15, "Bill", Seq("Elisabeth", "Paul")),
+    (3, "Michael", "Marie", 12, "Johny", Seq("Elisabeth", "Paul", "Rachel")),
+    (5, "Alice", "Doe", 12, "Rachel", Seq("Elisabeth", "Paul", "Edy"))).toDF("id", "firstName", "lastName", "age", "father", "teachers").as[Student]
+
+  import CompareIgnoringFields._
+  val differential = dfA.compareIgnoringFields(dfB)(Set("id"))(IgnoredFields('teachers), CompareIgnoringFields[Student])
+
+
+  differential[RowsWithSomeDifferencies].show(false)
+
+
+  scala> dfA.show(false)
+  +---+---------+--------+---+------+----------------------+
+  |id |firstName|lastName|age|father|teachers              |
+  +---+---------+--------+---+------+----------------------+
+  |1  |John     |Doe     |12 |Bob   |[Elisabeth, Paul]     |
+  |2  |Claire   |Michel  |13 |Bill  |[Elisabeth, Paul]     |
+  |3  |Michael  |Marie   |12 |Johny |[Elisabeth, Paul]     |
+  |4  |Alice    |Doe     |12 |Rachel|[Elisabeth, Paul, Edy]|
+  +---+---------+--------+---+------+----------------------+
+
+
+  scala> dfB.show(false)
+  +---+---------+--------+---+------+-------------------------+
+  |id |firstName|lastName|age|father|teachers                 |
+  +---+---------+--------+---+------+-------------------------+
+  |1  |John     |Doe     |12 |Bob   |[Elisabeth, Paul]        |
+  |2  |Claire   |Michel  |15 |Bill  |[Elisabeth, Paul]        |
+  |3  |Michael  |Marie   |12 |Johny |[Elisabeth, Paul, Rachel]|
+  |5  |Alice    |Doe     |12 |Rachel|[Elisabeth, Paul, Edy]   |
+  +---+---------+--------+---+------+-------------------------+
+
+
+  scala> differential("RowsWithSomeDifferencies").show(false)
+  +---+---------+--------+---+------+-----------------+
+  | id|firstName|lastName|age|father|         teachers|
+  +---+---------+--------+---+------+-----------------+
+  |  2|   Claire|  Michel| 15|  Bill|[Elisabeth, Paul]|
+  +---+---------+--------+---+------+-----------------+
+
+
+  scala> differential("IdenticalRows").show(false)
+  +---+---------+--------+---+------+-------------------------+
+  |id |firstName|lastName|age|father|teachers                 |
+  +---+---------+--------+---+------+-------------------------+
+  |1  |John     |Doe     |12 |Bob   |[Elisabeth, Paul]        |
+  |3  |Michael  |Marie   |12 |Johny |[Elisabeth, Paul, Rachel]|
+  +---+---------+--------+---+------+-------------------------+
+
+
+  scala> differential("RowsNotInRight").show(false)
+  +---+---------+--------+---+------+----------------------+
+  |id |firstName|lastName|age|father|teachers              |
+  +---+---------+--------+---+------+----------------------+
+  |4  |Alice    |Doe     |12 |Rachel|[Elisabeth, Paul, Edy]|
+  +---+---------+--------+---+------+----------------------+
+
+
+  scala> differential("RowsNotInLeft").show(false)
+  +---+---------+--------+---+------+----------------------+
+  |id |firstName|lastName|age|father|teachers              |
+  +---+---------+--------+---+------+----------------------+
+  |5  |Alice    |Doe     |12 |Rachel|[Elisabeth, Paul, Edy]|
+  +---+---------+--------+---+------+----------------------+
+----
